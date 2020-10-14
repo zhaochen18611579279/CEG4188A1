@@ -3,6 +3,8 @@ import threading
 from socket import *
 import sys
 
+CLIENT_CANNOT_CONNECT = "Unable to connect to {0}:{1}"
+CLIENT_SERVER_DISCONNECTED = "Server at {0}:{1} has disconnected"
 
 class BasicClient(object):
 
@@ -12,7 +14,15 @@ class BasicClient(object):
         self.port = int(port)
         self.socket = socket(AF_INET, SOCK_STREAM)
 
-        self.socket.connect((self.address, self.port))
+        try:
+            try:
+                self.socket.connect((self.address, self.port))
+            except socket.error, e:
+                print CLIENT_CANNOT_CONNECT
+        except AttributeError:
+            print CLIENT_CANNOT_CONNECT
+            sys.exit(1)
+
         self.send(self.name)
 
     def send(self, message):
@@ -25,7 +35,7 @@ class ListenStdIn(threading.Thread):
 
     def run(self):
         while True:
-            print('Listening to StdIn ...')
+            # print('Listening to StdIn ...')
             sentence = raw_input('[Me] ')
             # add spaces to make sentence 200 characters
             if len(sentence) < 200:
@@ -41,16 +51,20 @@ class ListenServer(threading.Thread):
 
     def run(self):
         while True:
-            print('Listening to Server ...')
-            sentence = client.socket.recv(1024)
-            print (sentence.rstrip())
+            # print('Listening to Server ...')
+            try:
+                sentence = client.socket.recv(1024)
+            except error:
+                print CLIENT_SERVER_DISCONNECTED
+                sys.exit(1)
+            print ("\n" + sentence.rstrip())
 
 
 args = sys.argv
 if len(args) != 4:
     print "Please supply a server address and port. # of args: " + repr(len(args))
     sys.exit()
-print args[0]
+
 client = BasicClient(args[1], args[2], args[3])
 
 print "Client name: " + client.name
@@ -67,6 +81,5 @@ serverThread.start()
 
 threads.append(inputThread)
 threads.append(serverThread)
-
 
 # python client.py Lenny localhost 12001
